@@ -2,7 +2,7 @@
   "content": [
     {
       "content": null,
-      "created": "2025-06-10T00:36:01.802570Z",
+      "created": "2025-06-10T19:14:44.174108Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -15,11 +15,11 @@
       "writable": true
     }
   ],
-  "created": "2025-06-10T00:36:01.801570Z",
+  "created": "2025-06-10T19:14:44.165108Z",
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-06-10T00:36:01.802570Z",
+  "last_modified": "2025-06-10T19:14:44.174108Z",
   "mimetype": null,
   "name": "files",
   "path": "files",

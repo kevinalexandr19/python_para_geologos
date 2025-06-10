@@ -1,0 +1,79 @@
+{
+  "name": "@jupyterlite/javascript-kernel-extension",
+  "version": "0.3.0",
+  "description": "JupyterLite - JavaScript Kernel Extension",
+  "homepage": "https://github.com/jupyterlite/javascript-kernel",
+  "bugs": {
+    "url": "https://github.com/jupyterlite/javascript-kernel/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jupyterlite/javascript-kernel.git"
+  },
+  "license": "BSD-3-Clause",
+  "author": "JupyterLite Contributors",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "directories": {
+    "lib": "lib/"
+  },
+  "files": [
+    "lib/*.d.ts",
+    "lib/*.js.map",
+    "lib/*.js"
+  ],
+  "scripts": {
+    "build": "jlpm build:lib && jlpm build:labextension:dev",
+    "build:labextension": "jupyter labextension build .",
+    "build:labextension:dev": "jupyter labextension build --development True .",
+    "build:lib": "tsc -b",
+    "build:prod": "jlpm clean && jlpm build:lib && jlpm build:labextension",
+    "clean": "jlpm clean:lib",
+    "clean:all": "jlpm clean:lib && jlpm run clean:dist && jlpm clean:labextension",
+    "clean:dist": "rimraf dist",
+    "clean:labextension": "rimraf ../../jupyterlite_javascript_kernel/labextension",
+    "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
+    "install:extension": "jlpm build",
+    "watch": "run-p watch:src watch:labextension",
+    "watch:labextension": "jupyter labextension watch .",
+    "watch:src": "tsc -w"
+  },
+  "dependencies": {
+    "@jupyterlite/javascript-kernel": "^0.3.0",
+    "@jupyterlite/kernel": "^0.2.1  || ^0.3.0",
+    "@jupyterlite/server": "^0.2.1 || ^0.3.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "~4.1.1",
+    "rimraf": "~5.0.1",
+    "typescript": "~5.1.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "outputDir": "../../jupyterlite_javascript_kernel/labextension",
+    "sharedPackages": {
+      "@jupyterlite/kernel": {
+        "bundled": false,
+        "singleton": true
+      },
+      "@jupyterlite/server": {
+        "bundled": false,
+        "singleton": true
+      },
+      "@jupyterlite/contents": {
+        "bundled": false,
+        "singleton": true
+      }
+    },
+    "_build": {
+      "load": "static/remoteEntry.6014628263d9ee9ca44a.js",
+      "extension": "./extension"
+    }
+  },
+  "jupyterlite": {
+    "liteExtension": true
+  }
+}

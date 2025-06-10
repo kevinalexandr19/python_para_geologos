@@ -25,6 +25,11 @@
       },
       {
         "extension": "./extension",
+        "load": "static/remoteEntry.6014628263d9ee9ca44a.js",
+        "name": "@jupyterlite/javascript-kernel-extension"
+      },
+      {
+        "extension": "./extension",
         "load": "static/remoteEntry.3745c44cbbd62cec9a73.js",
         "name": "@jupyterlite/pyodide-kernel-extension"
       },
