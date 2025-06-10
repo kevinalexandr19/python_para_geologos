@@ -1,0 +1,29 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2025-06-10T00:10:32.821154Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2024-04-16T05:38:08.965792Z",
+      "mimetype": "application/vnd.ms-excel",
+      "name": "rocas.csv",
+      "path": "files/rocas.csv",
+      "size": 1480406,
+      "type": "file",
+      "writable": true
+    }
+  ],
+  "created": "2025-06-10T00:10:32.820154Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "2025-06-10T00:10:32.821154Z",
+  "mimetype": null,
+  "name": "files",
+  "path": "files",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}

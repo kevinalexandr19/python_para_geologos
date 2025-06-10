@@ -1,0 +1,35 @@
+# Core modules (mandatory)
+jupyterlite-core==0.6.1
+jupyterlab~=4.4.3
+notebook~=7.4.3
+
+
+# Python kernel (optional)
+jupyterlite-pyodide-kernel==0.6.1
+
+# JavaScript kernel (optional)
+jupyterlite-javascript-kernel==0.3.0
+
+# P5 kernel (optional)
+jupyterlite-p5-kernel==0.1.0
+
+# JupyterLab: dark theme
+jupyterlab-night
+
+
+# Python: ipywidget library for Jupyter notebooks (optional)
+ipywidgets>=8.1.3,<9
+# Python: ipyevents library for Jupyter notebooks (optional)
+ipyevents>=2.0.1
+# Python: interative Matplotlib library for Jupyter notebooks (optional)
+ipympl>=0.8.2
+# Python: ipycanvas library for Jupyter notebooks (optional)
+ipycanvas>=0.9.1
+# Python: ipyleaflet library for Jupyter notebooks (optional)
+ipyleaflet
+# Matplotlib
+matplotlib==3.10.3
+# Pandas
+pandas==2.2.3
+# Numpy
+numpy==1.26.4
