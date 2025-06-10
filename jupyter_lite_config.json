@@ -1,6 +1,6 @@
 {
   "LiteBuildConfig": {
     "contents": ["content"],
-    "output_dir": "site"
+    "output_dir": "docs"
   }
 }
