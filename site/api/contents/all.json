@@ -2,11 +2,11 @@
   "content": [
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.820154Z",
+      "created": "2025-06-10T00:36:01.801570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
-      "last_modified": "2025-06-10T00:10:32.821154Z",
+      "last_modified": "2025-06-10T00:36:01.802570Z",
       "mimetype": null,
       "name": "files",
       "path": "files",
@@ -16,7 +16,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.825154Z",
+      "created": "2025-06-10T00:36:01.808570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -30,7 +30,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.827154Z",
+      "created": "2025-06-10T00:36:01.810571Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -44,7 +44,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.829154Z",
+      "created": "2025-06-10T00:36:01.811570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -58,7 +58,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.831154Z",
+      "created": "2025-06-10T00:36:01.813570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -72,7 +72,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.832154Z",
+      "created": "2025-06-10T00:36:01.815570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -86,7 +86,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.834154Z",
+      "created": "2025-06-10T00:36:01.817583Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -100,7 +100,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.835154Z",
+      "created": "2025-06-10T00:36:01.819570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -114,7 +114,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.837154Z",
+      "created": "2025-06-10T00:36:01.820577Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -128,7 +128,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.839154Z",
+      "created": "2025-06-10T00:36:01.822571Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -142,7 +142,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.841155Z",
+      "created": "2025-06-10T00:36:01.824570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -156,7 +156,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.843155Z",
+      "created": "2025-06-10T00:36:01.826570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -170,7 +170,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.844165Z",
+      "created": "2025-06-10T00:36:01.828570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -184,7 +184,7 @@
     },
     {
       "content": null,
-      "created": "2025-06-10T00:10:32.846160Z",
+      "created": "2025-06-10T00:36:01.829570Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -197,11 +197,11 @@
       "writable": true
     }
   ],
-  "created": "2025-06-10T00:10:32.820154Z",
+  "created": "2025-06-10T00:36:01.801570Z",
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-06-10T00:10:32.846160Z",
+  "last_modified": "2025-06-10T00:36:01.829570Z",
   "mimetype": null,
   "name": "",
   "path": "",
