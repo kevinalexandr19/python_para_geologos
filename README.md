@@ -10,8 +10,10 @@ Si tienes cuenta en Github, no olvides darle una estrella al proyecto para que s
 ### **Autor: Kevin Alexander Gómez**
 #### Contacto: kevinalexandr19@gmail.com | [Linkedin](https://www.linkedin.com/in/kevin-alexander-g%C3%B3mez-2b0263111/) | [Github](https://github.com/kevinalexandr19)
 ***
-### **¿Quieres probar el código en menos de 2 minutos y sin necesidad de instalar Python?**
-Ingresa a la aplicación haciendo clic aquí ☞ [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/kevinalexandr19/manual-python-geologia/main?labpath=notebooks%2Fpg000_inicio.ipynb)
+### **¿Quieres probar el código sin necesidad de instalar Python?**
+Usa la aplicación de Jupyterlite haciendo [click aquí](https://kevinalexandr19.github.io/python_para_geologos/lab/index.html)
+
+O ingresa a la aplicación de Binder haciendo clic aquí ☞ [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/kevinalexandr19/manual-python-geologia/main?labpath=notebooks%2Fpg000_inicio.ipynb)
 ***
 ### **¿Tienes Python instalado en tu computadora?**
 Puedes descargar todo el contenido del proyecto haciendo clic aquí ☞ <a href="https://drive.google.com/drive/folders/1LcuS0zHbzpuYjXPksMktSMlTLY1j4ac9?usp=sharing" target="_blank">
