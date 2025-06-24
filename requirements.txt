@@ -16,3 +16,7 @@ ipyleaflet
 matplotlib==3.10.3
 pandas==2.2.3
 numpy==1.26.4
+tqdm==4.66.4
+pypdf==5.6.1
+seaborn==0.13.2
+reportlab==4.4.2
