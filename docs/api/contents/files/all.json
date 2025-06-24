@@ -13,13 +13,27 @@
       "size": 1480406,
       "type": "file",
       "writable": true
+    },
+    {
+      "content": null,
+      "created": "2025-06-24T16:51:37.300915Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2018-03-31T20:47:53.921969Z",
+      "mimetype": "application/pdf",
+      "name": "zealandia.pdf",
+      "path": "files/zealandia.pdf",
+      "size": 459817,
+      "type": "file",
+      "writable": true
     }
   ],
   "created": "2025-06-10T19:14:44.165108Z",
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-06-10T19:14:44.174108Z",
+  "last_modified": "2025-06-24T16:51:37.300915Z",
   "mimetype": null,
   "name": "files",
   "path": "files",
