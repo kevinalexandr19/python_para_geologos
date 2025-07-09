@@ -2,6 +2,20 @@
   "content": [
     {
       "content": null,
+      "created": "2025-07-09T07:42:00.471875Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2025-07-09T07:42:00.471875Z",
+      "mimetype": null,
+      "name": "rasters",
+      "path": "files/rasters",
+      "size": null,
+      "type": "directory",
+      "writable": true
+    },
+    {
+      "content": null,
       "created": "2025-06-10T19:14:44.174108Z",
       "format": null,
       "hash": null,
@@ -11,6 +25,20 @@
       "name": "rocas.csv",
       "path": "files/rocas.csv",
       "size": 1480406,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2025-07-09T07:42:00.550845Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2025-07-08T08:00:12.466019Z",
+      "mimetype": "application/vnd.ms-excel",
+      "name": "sismos.csv",
+      "path": "files/sismos.csv",
+      "size": 896303,
       "type": "file",
       "writable": true
     },
@@ -33,7 +61,7 @@
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-06-24T16:51:37.300915Z",
+  "last_modified": "2025-07-09T07:42:00.550845Z",
   "mimetype": null,
   "name": "files",
   "path": "files",

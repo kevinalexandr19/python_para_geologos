@@ -1,0 +1,57 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2025-07-09T07:42:00.471875Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2024-12-11T19:29:44.671338Z",
+      "mimetype": "image/tiff",
+      "name": "raster_LPGRS_Ca.tif",
+      "path": "files\\rasters\\lunar_mapping/raster_LPGRS_Ca.tif",
+      "size": 4804866,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2025-07-09T07:42:00.495875Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2024-12-11T19:29:44.798408Z",
+      "mimetype": "image/tiff",
+      "name": "raster_LPGRS_Fe.tif",
+      "path": "files\\rasters\\lunar_mapping/raster_LPGRS_Fe.tif",
+      "size": 4804866,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2025-07-09T07:42:00.519884Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2024-12-11T19:29:44.797411Z",
+      "mimetype": "image/tiff",
+      "name": "raster_LPGRS_Mg.tif",
+      "path": "files\\rasters\\lunar_mapping/raster_LPGRS_Mg.tif",
+      "size": 4804866,
+      "type": "file",
+      "writable": true
+    }
+  ],
+  "created": "2025-07-09T07:42:00.471875Z",
+  "format": "json",
+  "hash": null,
+  "hash_algorithm": null,
+  "last_modified": "2025-07-09T07:42:00.519884Z",
+  "mimetype": null,
+  "name": "files\\rasters\\lunar_mapping",
+  "path": "files\\rasters\\lunar_mapping",
+  "size": null,
+  "type": "directory",
+  "writable": true
+}
