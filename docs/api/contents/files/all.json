@@ -2,6 +2,34 @@
   "content": [
     {
       "content": null,
+      "created": "2025-07-09T08:27:59.756402Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2022-08-20T16:20:24.245764Z",
+      "mimetype": "application/vnd.ms-excel",
+      "name": "assay.csv",
+      "path": "files/assay.csv",
+      "size": 450433,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2025-07-09T08:27:59.765403Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2021-11-15T00:32:00.001969Z",
+      "mimetype": "application/vnd.ms-excel",
+      "name": "data_estructural.csv",
+      "path": "files/data_estructural.csv",
+      "size": 739,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
       "created": "2025-07-09T07:42:00.471875Z",
       "format": null,
       "hash": null,
@@ -61,7 +89,7 @@
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-07-09T07:42:00.550845Z",
+  "last_modified": "2025-07-09T08:27:59.765403Z",
   "mimetype": null,
   "name": "files",
   "path": "files",
