@@ -13,7 +13,6 @@ Si tienes cuenta en Github, no olvides darle una estrella al proyecto para que s
 ### **¿Quieres probar el código sin necesidad de instalar Python?**
 Usa la aplicación de Jupyterlite haciendo [click aquí](https://kevinalexandr19.github.io/python_para_geologos/lab/index.html?path=pg000_inicio.ipynb)
 
-O ingresa a la aplicación de Binder haciendo clic aquí ☞ [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/kevinalexandr19/manual-python-geologia/main?labpath=notebooks%2Fpg000_inicio.ipynb)
 ***
 ### **¿Tienes Python instalado en tu computadora?**
 Puedes descargar todo el contenido del proyecto haciendo clic aquí ☞ <a href="https://drive.google.com/drive/folders/1LcuS0zHbzpuYjXPksMktSMlTLY1j4ac9?usp=sharing" target="_blank">
@@ -30,7 +29,7 @@ Es recomendable tener conocimientos previos en geología general, estadística y
 También es importante tener perseverancia para aprender cada tema y creatividad para resolver problemas.
 
 ***
-## **Índice** [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/kevinalexandr19/manual-python-geologia/main?labpath=notebooks%2Fpg000_inicio.ipynb)
+## **Índice**
 Todos los capítulos están disponibles dentro del repositorio como notebooks de Jupyter `.ipynb`. <br>
 Es recomendable descargar el contenido del repositorio y usarlo como plantilla para desarrollar tus propios notebooks.
 
@@ -134,11 +133,13 @@ Es recomendable descargar el contenido del repositorio y usarlo como plantilla p
 ---
 ### ¿Cómo usar el contenido de este proyecto?
 El proyecto contiene documentos en formato `.ipynb` y se pueden abrir de las siguientes formas:
+- A través de [JupyterLite](https://kevinalexandr19.github.io/python_para_geologos/lab/index.html?path=pg000_inicio.ipynb), la opción del proyecto para ejecutar los notebooks disponibles sin instalar Python.
 - A través de un navegador web, usando la aplicación de `Google Colab`.
-- Usando `Binder`, una aplicación web que permite ejecutar código arbitrario dentro de un entorno virtual (similar a `Google Colab`).
 - A través de un editor de código instalado en tu computadora, como por ejemplo: `Jupyter Lab`, `Jupyter Notebook` o `Visual Studio Code`.
 
-Si no tienes instalado `Python`, puedes seguir las indicaciones del archivo `instalar_python.ipynb`.
+Para trabajar en tu computadora, sigue el [tutorial de instalación de Python y JupyterLab](notebooks/instalar_python.ipynb): usa Python oficial, un entorno venv y paquetes instalados con pip. La versión estable de referencia es **Python 3.15.2** (verificada el 15 de noviembre de 2026); consulta [Python.org](https://www.python.org/downloads/) por si hay una versión estable posterior.
+
+JupyterLite no necesita esa instalación local. Su kernel y sus librerías son independientes de los de tu computadora; algunos notebooks especializados todavía requieren adaptación para ejecutarse allí.
 
 ***
 ### Referencias
