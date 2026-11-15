@@ -1,0 +1,10 @@
+{
+  "@jupyterlab/apputils-extension:themes": {
+    "theme": "Catppuccin Mocha"
+  },
+  "@jupyterlab/codemirror-extension:plugin": {
+    "defaultConfig": {
+      "autoClosingBrackets": true
+    }
+  }
+}
