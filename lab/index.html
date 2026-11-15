@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abrir JupyterLite</title>
+  <script>
+    // Keep existing notebook links and anchors when opening the published app.
+    const target = new URL("../docs/lab/index.html", window.location.href);
+    target.search = window.location.search;
+    target.hash = window.location.hash;
+    window.location.replace(target.href);
+  </script>
+</head>
+<body>
+  <p><a href="../docs/lab/index.html?path=pg000_inicio.ipynb">Abrir Python para Geólogos en JupyterLite</a></p>
+</body>
+</html>
