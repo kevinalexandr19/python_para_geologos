@@ -11,7 +11,7 @@ Si tienes cuenta en Github, no olvides darle una estrella al proyecto para que s
 #### Contacto: kevinalexandr19@gmail.com | [Linkedin](https://www.linkedin.com/in/kevin-alexander-g%C3%B3mez-2b0263111/) | [Github](https://github.com/kevinalexandr19)
 ***
 ### **¿Quieres probar el código sin necesidad de instalar Python?**
-Usa la aplicación de Jupyterlite haciendo [click aquí](https://kevinalexandr19.github.io/python_para_geologos/docs/lab/index.html?path=pg000_inicio.ipynb)
+Usa la aplicación de Jupyterlite haciendo [click aquí](https://kevinalexandr19.github.io/python_para_geologos/lab/index.html?path=pg000_inicio.ipynb)
 
 ***
 ### **¿Tienes Python instalado en tu computadora?**
@@ -133,7 +133,7 @@ Es recomendable descargar el contenido del repositorio y usarlo como plantilla p
 ---
 ### ¿Cómo usar el contenido de este proyecto?
 El proyecto contiene documentos en formato `.ipynb` y se pueden abrir de las siguientes formas:
-- A través de [JupyterLite](https://kevinalexandr19.github.io/python_para_geologos/docs/lab/index.html?path=pg000_inicio.ipynb), la opción del proyecto para ejecutar los notebooks disponibles sin instalar Python.
+- A través de [JupyterLite](https://kevinalexandr19.github.io/python_para_geologos/lab/index.html?path=pg000_inicio.ipynb), la opción del proyecto para ejecutar los notebooks disponibles sin instalar Python.
 - A través de un navegador web, usando la aplicación de `Google Colab`.
 - A través de un editor de código instalado en tu computadora, como por ejemplo: `Jupyter Lab`, `Jupyter Notebook` o `Visual Studio Code`.
 
