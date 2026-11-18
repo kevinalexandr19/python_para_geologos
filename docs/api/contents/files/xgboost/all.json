@@ -1,0 +1,32 @@
+{
+  "content": [
+    {
+      "content": null,
+      "created": "2026-11-18T02:37:30.256848Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T02:37:30.256848Z",
+      "mimetype": "text/csv",
+      "name": "skarn_pixeles.csv",
+      "path": "files/xgboost/skarn_pixeles.csv",
+      "size": 415604,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T02:37:30.256848Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T02:37:30.256848Z",
+      "mimetype": "application/octet-stream",
+      "name": "skarn_2_vistas.npz",
+      "path": "files/xgboost/skarn_2_vistas.npz",
+      "size": 167345,
+      "type": "file",
+      "writable": true
+    }
+  ]
+}

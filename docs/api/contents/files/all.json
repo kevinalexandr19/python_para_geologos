@@ -181,6 +181,48 @@
       "size": 38478,
       "type": "file",
       "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T02:37:30.256848Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T02:37:30.256848Z",
+      "mimetype": "text/csv",
+      "name": "anorthosite.csv",
+      "path": "files/anorthosite.csv",
+      "size": 2518,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T02:37:30.256848Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T02:37:30.256848Z",
+      "mimetype": "text/csv",
+      "name": "tholeitic_basalt.csv",
+      "path": "files/tholeitic_basalt.csv",
+      "size": 54211,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T02:37:30.256848Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T02:37:30.256848Z",
+      "mimetype": null,
+      "name": "xgboost",
+      "path": "files/xgboost",
+      "size": null,
+      "type": "directory",
+      "writable": true
     }
   ],
   "created": "2025-06-10T19:14:44.165108Z",
