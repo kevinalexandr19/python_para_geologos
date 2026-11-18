@@ -223,6 +223,48 @@
       "size": null,
       "type": "directory",
       "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T08:50:52.242442Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T08:50:52.242442Z",
+      "mimetype": "text/x-python",
+      "name": "gamma.py",
+      "path": "files/gamma.py",
+      "size": 20419,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T08:50:52.242442Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T08:50:52.242442Z",
+      "mimetype": "text/csv",
+      "name": "data_variograma.csv",
+      "path": "files/data_variograma.csv",
+      "size": 15053,
+      "type": "file",
+      "writable": true
+    },
+    {
+      "content": null,
+      "created": "2026-11-18T08:50:52.242442Z",
+      "format": null,
+      "hash": null,
+      "hash_algorithm": null,
+      "last_modified": "2026-11-18T08:50:52.242442Z",
+      "mimetype": "text/csv",
+      "name": "data_sesgada.csv",
+      "path": "files/data_sesgada.csv",
+      "size": 9736,
+      "type": "file",
+      "writable": true
     }
   ],
   "created": "2025-06-10T19:14:44.165108Z",

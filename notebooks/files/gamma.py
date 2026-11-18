@@ -1,707 +1,452 @@
-####
-#### GAMMA v1.2 Junio 2023
-#### Módulo de geoestadística para el modelamiento del variograma
-#### Nota: solo variograma 1D, el variograma 2D está en desarrollo
+"""GAMMA: semivariogramas experimentales y modelos didácticos.
 
-#### Copyright 2023, kevinalexandr19
-#### This software may be modified and distributed under the terms of the MIT license.
-#### See the LICENSE file for details.
+Copyright 2023, kevinalexandr19. Distribuido bajo la licencia MIT.
+"""
 
-import sys
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-import ipywidgets as widgets
-from numba import jit
-from sklearn.cluster import DBSCAN
-from IPython.display import Markdown
 
 
-###############################################################################
-# Cálculo de distancia y diferencia cuadrática entre cada par de puntos para 1D
-@jit(nopython=True)
+def _observations(values, coords):
+    values = np.asarray(values, dtype=float)
+    coords = np.asarray(coords, dtype=float)
+    if values.ndim != 1 or values.size < 2:
+        raise ValueError("Se requieren al menos dos valores en un vector.")
+    if coords.ndim == 1:
+        coords = coords[:, None]
+    if coords.ndim != 2:
+        raise ValueError("Usa coordenadas (n,), (n, d) o (d, n).")
+    if coords.shape[0] != values.size and coords.shape[1] == values.size:
+        coords = coords.T
+    if coords.shape[0] != values.size or not 1 <= coords.shape[1] <= 3:
+        raise ValueError("Cada valor debe tener una fila de 1 a 3 coordenadas.")
+    if not np.isfinite(values).all() or not np.isfinite(coords).all():
+        raise ValueError("Filtra las filas con valores o coordenadas no finitos.")
+    return values, coords
+
+
+def _pair_data(values, coords):
+    # Conservamos el orden de los pares: primero (i, i+1), luego (i, i+2), etc.
+    n = len(values)
+    count = n * (n - 1) // 2
+    i = np.empty(count, dtype=np.intp)
+    j = np.empty_like(i)
+    start = 0
+    for step in range(1, n):
+        stop = start + n - step
+        i[start:stop] = np.arange(n - step)
+        j[start:stop] = np.arange(step, n)
+        start = stop
+    delta = coords[j] - coords[i]
+    return i, j, np.linalg.norm(delta, axis=1), (values[j] - values[i]) ** 2, delta
+
+
 def gam1d(values, coords):
-    lags = np.array([np.float64(x) for x in range(0)])
-    sqvalues = np.array([np.float64(x) for x in range(0)])
-
-    for i in range(1, len(values) + 1):
-        dist = np.abs(coords[i:] - coords[:-i])
-        sqdiff = np.power(values[i:] - values[:-i], 2)
-
-        lags = np.append(lags, dist)
-        sqvalues = np.append(sqvalues, sqdiff)
-
+    """Devuelve las distancias y diferencias al cuadrado de los pares 1D."""
+    values, coords = _observations(values, coords)
+    if coords.shape[1] != 1:
+        raise ValueError("gam1d requiere una coordenada por muestra.")
+    _, _, lags, sqvalues, _ = _pair_data(values, coords)
     return lags, sqvalues
 
 
-###############################################################################
-# Cálculo de distancia y diferencia cuadrática entre cada par de puntos para 2D
-@jit(nopython=True)
 def gam2d(values, coords):
-    lags = np.array([np.float64(x) for x in range(0)])
-    sqvalues = np.array([np.float64(x) for x in range(0)])
-    angles = np.array([np.float64(x) for x in range(0)])
-
-    for i in range(1, len(values) + 1):
-        dist = coords[:, i:] - coords[:, :-i]
-        az = np.degrees(np.arctan2(dist[0, :], dist[1, :]))
-        dist = np.power(np.power(dist[0, :], 2) + np.power(dist[1, :], 2), 0.5)
-        sqdiff = np.power(values[i:] - values[:-i], 2)
-
-        lags = np.append(lags, dist)
-        sqvalues = np.append(sqvalues, sqdiff)
-        angles = np.append(angles, az)
-    
+    """Devuelve distancias, diferencias al cuadrado y azimut desde el norte."""
+    values, coords = _observations(values, coords)
+    if coords.shape[1] != 2:
+        raise ValueError("gam2d requiere dos coordenadas por muestra.")
+    _, _, lags, sqvalues, delta = _pair_data(values, coords)
+    angles = np.degrees(np.arctan2(delta[:, 0], delta[:, 1]))
     return lags, sqvalues, angles
 
 
-###################################################
-# Modelos de ajuste para el variograma experimental
-@jit(nopython=True)
 def linear(h, c0, c, a):
-    return c0 + c * (h/a)
+    """Modelo sin meseta: c/a es la pendiente para h > 0."""
+    h = np.asarray(h)
+    return np.where(h == 0, 0.0, c0 + c * h / a)
 
-@jit(nopython=True)
+
 def exponential(h, c0, c, a):
-    return c0 + c * (1 - np.exp(-h/a))
+    """Modelo exponencial, con a como escala interna."""
+    h = np.asarray(h)
+    return np.where(h == 0, 0.0, c0 - c * np.expm1(-h / a))
 
-@jit(nopython=True)
+
 def spherical(h, c0, c, a):
-    return c0 + c * (((1.5 * (h / a)) - (0.5 * ((h / a) ** 3))) * (h <= a) + 1 * (h > a))
+    """Modelo esférico, con meseta a partir de la distancia a."""
+    h = np.asarray(h)
+    r = np.minimum(h / a, 1.0)
+    return np.where(h == 0, 0.0, c0 + c * (1.5 * r - 0.5 * r**3))
 
-@jit(nopython=True)
+
 def gaussian(h, c0, c, a):
-    return c0 + c * (1 - np.exp(-(h ** 2) / (a ** 2)))
+    """Modelo gaussiano, con a como escala interna."""
+    h = np.asarray(h)
+    return np.where(h == 0, 0.0, c0 - c * np.expm1(-(h / a)**2))
 
 
-###################################################
-# Métricas de evaluación de ajuste
-@jit(nopython=True)
-def r2_score(gamma: np.array, prediction: np.array):
-    ss_res = np.sum((gamma - prediction) ** 2)
-    ss_tot = np.sum((gamma - np.mean(gamma)) ** 2)
-    r2 = 1 - (ss_res / ss_tot)
-    return r2
-
-@jit(nopython=True)
-def mse_score(gamma: np.array, prediction: np.array):
-    mse = np.mean((gamma - prediction) ** 2)
-    return mse
+MODELS = {"linear": linear, "exponential": exponential, "spherical": spherical, "gaussian": gaussian}
+RANGE_FACTORS = {"linear": 1.0, "exponential": np.log(20), "spherical": 1.0,
+                 "gaussian": np.sqrt(np.log(20))}
 
 
-###################################################
-# Algoritmo de búsqueda de lag clusters
-def search_clusters(lags, diff, n_steps):
-    if len(lags) > 1000:
-        for i in range(2, n_steps+1):
-            X = lags[:1000*i].reshape(-1, 1)
-            clustering = DBSCAN(eps=diff, min_samples=5).fit(X)
-            if clustering.labels_.max() >= 3:
-                _0 = np.nonzero(clustering.labels_ == 0)
-                lagDist = lags[_0].mean()
-                return lagDist
-    else:
-        X = lags.reshape(-1, 1)
-        clustering = DBSCAN(eps=diff, min_samples=5).fit(X)
-        _0 = np.nonzero(clustering.labels_ == 0)
-        lagDist = lags[_0].mean()
-        return lagDist
+def _show_in_widget(fig, image, status, message):
+    """Update widget traits directly, including in browser kernel callbacks."""
+    from html import escape
+    from io import BytesIO
+    import matplotlib.pyplot as plt
+
+    with BytesIO() as buffer:
+        fig.savefig(buffer, format="png", dpi=105, bbox_inches="tight", facecolor="white")
+        image.value = buffer.getvalue()
+    plt.close(fig)
+    status.value = f"<pre>{escape(message)}</pre>"
 
 
-#############################################################################################
-# Widget que selecciona la distancia de separación entre puntos en un variograma experimental
-class LagDistSelector(object):
+def r2_score(gamma, prediction):
+    observed = np.asarray(gamma)
+    total = np.sum((observed - observed.mean()) ** 2)
+    return None if total == 0 else float(1 - np.sum((observed - prediction) ** 2) / total)
+
+
+def mse_score(gamma, prediction):
+    return float(np.mean((np.asarray(gamma) - prediction) ** 2))
+
+
+class Variogram:
+    """Agrupa pares de coordenadas 1D, 2D o 3D en clases de distancia.
+
+    lagDist fija el paso entre centros. La primera clase es (0, 1.5*lagDist];
+    luego cada clase tiene ancho lagDist y su límite superior es inclusivo.
+    max_lag, si se indica, limita la distancia real del par, no la nominal.
+    Los pares coincidentes quedan fuera de las clases positivas. Para 2D,
+    azimuth se mide desde +Y hacia +X y representa un eje (módulo 180°).
+    El número de pares crece como n*(n-1)/2. Usar subconjuntos para datos grandes.
+    """
+
+    def __init__(self, values, coords, lagDist=None, *, max_lag=None,
+                 azimuth=None, angle_tolerance=22.5):
+        self.values, points = _observations(values, coords)
+        self.n, d = points.shape
+        self.coords = points[:, 0] if d == 1 else points.T
+        self.dim = f"{d}D"
+        self.var = float(self.values.var())
+        self.max_lag = None if max_lag is None else self._positive(max_lag, "max_lag")
+        i, j, lags, squared, delta = _pair_data(self.values, points)
+        order = np.argsort(lags, kind="stable")
+        self.lags, self.sqvalues = lags[order], squared[order]
+        self._i, self._j = i[order], j[order]
+        self.coincident_pairs = int(np.count_nonzero(self.lags == 0))
+        self.angles = None
+        if d == 2:
+            self.angles = np.degrees(np.arctan2(delta[order, 0], delta[order, 1]))
+
+        usable = self.lags > 0
+        if self.max_lag is not None:
+            usable &= self.lags <= self.max_lag
+        self.azimuth = None
+        self.angle_tolerance = None
+        if azimuth is not None:
+            if d != 2:
+                raise ValueError("El filtro por azimut requiere coordenadas 2D.")
+            azimuth, tolerance = float(azimuth), float(angle_tolerance)
+            if not np.isfinite(azimuth) or not 0 <= tolerance <= 90:
+                raise ValueError("Usa un azimut finito y una tolerancia entre 0 y 90°.")
+            self.azimuth, self.angle_tolerance = azimuth % 180, tolerance
+            angular_gap = (self.angles - self.azimuth + 90) % 180 - 90
+            usable &= np.abs(angular_gap) <= tolerance
+        self._usable = usable
+        self.lagDistSelector = LagDistSelector(self)
+
+        if lagDist is None:
+            # La mediana de los vecinos más próximos sirve como punto de partida.
+            # Un par en la misma coordenada aporta 0 m, y se excluye de esta regla.
+            nearest = np.full(self.n, np.inf)
+            positive = lags > 0
+            np.minimum.at(nearest, i[positive], lags[positive])
+            np.minimum.at(nearest, j[positive], lags[positive])
+            finite = nearest[np.isfinite(nearest)]
+            if not len(finite):
+                raise ValueError("Se requieren al menos dos coordenadas distintas.")
+            lagDist = np.median(finite)
+        self.updateLagDist(lagDist)
+
+    @staticmethod
+    def _positive(value, name):
+        value = float(value)
+        if not np.isfinite(value) or value <= 0:
+            raise ValueError(f"{name} debe ser finito y mayor que 0.")
+        return value
+
+    def updateLagDist(self, lagDist=None):
+        """Recalcula las clases usando los mismos pares e invalida el ajuste previo."""
+        step = self._positive(self.lagDistSelector.lagDist if lagDist is None else lagDist,
+                              "lagDist")
+        distances, square = self.lags[self._usable], self.sqvalues[self._usable]
+        if len(distances) and distances[-1] / 2**52 >= step:
+            raise ValueError("lagDist es demasiado pequeño para estas distancias.")
+        scaled = distances / step
+        classes = np.maximum(1, np.ceil(scaled - 0.5)).astype(np.int64)
+        groups, inverse, count = np.unique(classes, return_inverse=True, return_counts=True)
+        self.lagDist = self.lagDistSelector.lagDist = step
+        self.h = groups * step
+        self.lower = np.where(groups == 1, 0.0, (groups - 0.5) * step)
+        self.bins = (groups + 0.5) * step
+        self.mean_lag = np.bincount(inverse, weights=distances) / count
+        self.gamma = 0.5 * np.bincount(inverse, weights=square) / count
+        self.pairs = count
+        self._class_centers = self.h[inverse]
+        self.model = self.current_model = None
+        return self
+
+    def pair_table(self):
+        """Muestra las filas, distancias y contribuciones de los pares incluidos."""
+        import pandas as pd
+
+        used = self._usable
+        return pd.DataFrame({"i": self._i[used], "j": self._j[used], "h_real": self.lags[used],
+                             "diferencia²": self.sqvalues[used], "h_clase": self._class_centers,
+                             "semivarianza_par": self.sqvalues[used] / 2})
+
+    def lag_table(self):
+        """Devuelve centros nominales, distancias medias, conteos y semivarianzas."""
+        import pandas as pd
+
+        return pd.DataFrame({"h": self.h, "desde": self.lower, "hasta": self.bins,
+                             "h_media": self.mean_lag, "pares": self.pairs, "gamma": self.gamma})
+
+    def __str__(self):
+        summary = (f"Variograma experimental {self.dim}\n"
+                   f"Muestras: {self.n} | Pares usados: {self.pairs.sum():,} de {len(self.lags):,}\n"
+                   f"Clases con datos: {len(self.h)} | Paso: {self.lagDist:g}\n")
+        if self.model is not None:
+            m = self.model
+            reach = "sin meseta" if m["a"] is None else f"{m['a']:.4g}"
+            summary += f"Modelo: {m['model']} | C0: {m['c0']:.4g} | C: {m['c']:.4g} | Alcance: {reach}"
+        return summary.strip()
+
+    def _fit_indices(self, n_points, min_pairs):
+        if int(min_pairs) != min_pairs or min_pairs < 1:
+            raise ValueError("min_pairs debe ser un entero positivo.")
+        eligible = np.flatnonzero(self.pairs >= min_pairs)
+        if n_points is None:
+            return eligible
+        if int(n_points) != n_points or not 1 <= n_points <= len(eligible):
+            raise ValueError("n_points debe caber en las clases con suficientes pares.")
+        return eligible[:int(n_points)]
+
+    def _save_model(self, name, popt, index, min_pairs):
+        c0, c, scale = map(float, popt)
+        prediction = MODELS[name](self.mean_lag[index], c0, c, scale)
+        has_sill = name != "linear"
+        self.model = self.current_model = {
+            "model": name, "n_points": len(index), "min_pairs": int(min_pairs),
+            "c0": c0, "c": c, "a": float(scale * RANGE_FACTORS[name]) if has_sill else None,
+            "sill": c0 + c if has_sill else None, "popt": [c0, c, scale],
+            "r2": r2_score(self.gamma[index], prediction),
+            "mse": mse_score(self.gamma[index], prediction),
+        }
+        return self.model
+
+    def fit(self, model="spherical", n_points=None, *, min_pairs=1):
+        """Ajusta un modelo a la distancia media de cada clase, ponderada por pares."""
+        from scipy.optimize import curve_fit, nnls
+
+        if model not in MODELS:
+            raise ValueError(f"Modelo desconocido. Usa uno de {list(MODELS)}.")
+        index = self._fit_indices(n_points, min_pairs)
+        if len(index) < (2 if model == "linear" else 3):
+            raise ValueError("Hay muy pocas clases para ajustar este modelo.")
+        h, observed = self.mean_lag[index], self.gamma[index]
+        weights = np.sqrt(self.pairs[index])
+        if model == "linear":
+            # Usamos una escala fija para evitar ajustar por separado dos
+            # parámetros que en la recta solo aparecen como c/a.
+            scale = float(h[-1])
+            design = np.column_stack([np.ones(len(h)), h / scale])
+            c0, c = nnls(design * weights[:, None], observed * weights)[0]
+            popt = [c0, c, scale]
+        elif np.all(observed == 0):
+            popt = [0, 0, float(h[-1] / 2)]
+        else:
+            amplitude = observed.max()
+            # Normalizamos h y gamma para evitar mal condicionamiento
+            # cuando las coordenadas y las semivarianzas tienen escalas distintas.
+            distance = h[-1]
+            start = [min(observed[0] / amplitude, 0.25), 0.8, 0.5]
+            scaled, _ = curve_fit(MODELS[model], h / distance, observed / amplitude,
+                                  sigma=1 / weights, p0=start,
+                                  bounds=([0, 0, 1e-6], [np.inf, np.inf, np.inf]),
+                                  maxfev=6000)
+            popt = scaled * [amplitude, amplitude, distance]
+        return self._save_model(model, popt, index, min_pairs)
+
+    def set_model(self, model, c0, c, a, n_points=None, *, min_pairs=1):
+        """Fija parámetros. a es el alcance al 95% en exponencial y gaussiano."""
+        if model not in MODELS:
+            raise ValueError(f"Modelo desconocido. Usa uno de {list(MODELS)}.")
+        c0, c = float(c0), float(c)
+        if not np.isfinite([c0, c]).all() or min(c0, c) < 0:
+            raise ValueError("C0 y C deben ser finitos y no negativos.")
+        a = self._positive(a, "a")
+        index = self._fit_indices(n_points, min_pairs)
+        if len(index) == 0:
+            raise ValueError("No hay clases con suficientes pares.")
+        return self._save_model(model, [c0, c, a / RANGE_FACTORS[model]], index, min_pairs)
+
+    def predict(self, h):
+        """Evalúa el modelo guardado en distancias no negativas."""
+        if self.model is None:
+            raise ValueError("Ajusta o define un modelo primero.")
+        h = np.asarray(h, dtype=float)
+        if not np.isfinite(h).all() or np.any(h < 0):
+            raise ValueError("Las distancias deben ser finitas y no negativas.")
+        return MODELS[self.model["model"]](h, *self.model["popt"])
+
+    def plot(self, *, distance_unit="m", value_unit="unidad"):
+        """Dibuja semivarianzas y conteos de pares con el mismo eje de distancia."""
+        import matplotlib.pyplot as plt
+
+        if not len(self.h):
+            raise ValueError("No quedan pares con estos filtros.")
+        fig, (ax, counts) = plt.subplots(2, 1, figsize=(8.8, 5.6), sharex=True,
+                                        gridspec_kw={"height_ratios": [3, 1]})
+        ax.scatter(self.mean_lag, self.gamma, facecolors="white", edgecolors="#0072B2",
+                   s=39, label="Clases experimentales", zorder=3)
+        if self.model is not None:
+            m = self.model
+            used = self._fit_indices(m["n_points"], m["min_pairs"])
+            ax.scatter(self.mean_lag[used], self.gamma[used], color="#0072B2", s=19,
+                       label="Clases usadas en el ajuste", zorder=4)
+            last = self.mean_lag[used[-1]]
+            end = self.mean_lag[-1]
+            h = np.linspace(last * 1e-6, last, 200)
+            ax.plot(h, self.predict(h), color="#B84D12", lw=2, label=m["model"])
+            if end > last:
+                extrapolation = np.linspace(last, end, 160)
+                ax.plot(extrapolation, self.predict(extrapolation), "--", color="#B84D12",
+                        label="Fuera del ajuste")
+            ax.scatter(0, m["c0"], facecolor="white", edgecolor="#B84D12", zorder=5)
+            ax.scatter(0, 0, color="#B84D12", s=17, zorder=5)
+        ax.set(title=f"Variograma experimental {self.dim}", ylabel=f"Semivarianza ({value_unit})²")
+        ax.set_ylim(bottom=0)
+        ax.legend(frameon=False, fontsize=9)
+        counts.bar(self.mean_lag, self.pairs, width=0.62 * self.lagDist, color="#608DA4")
+        counts.set(xlabel=f"Distancia media del par ({distance_unit})", ylabel="Pares")
+        counts.set_xlim(left=-0.13 * self.lagDist)
+        for axis in (ax, counts):
+            axis.grid(alpha=.20)
+            axis.set_axisbelow(True)
+        fig.tight_layout()
+        return fig, (ax, counts)
+
+    def selectLagDist(self):
+        """Abre el control interactivo para cambiar el paso de las clases."""
+        return self.lagDistSelector.lagDistWidget()
+
+    def fitting(self, *, distance_unit="m", value_unit="unidad"):
+        """Abre controles de ajuste automático y manual sin calcular todos los modelos."""
+        import ipywidgets as widgets
+        from IPython.display import display
+        from html import escape
+
+        if len(self.h) < 2 and self.model is None:
+            raise ValueError("Se requieren al menos dos clases para usar el ajuste.")
+        saved = self.model or self.fit("spherical" if len(self.h) >= 3 else "linear")
+        min_pairs = saved["min_pairs"]
+        eligible = int((self.pairs >= min_pairs).sum())
+        name = widgets.Dropdown(options=list(MODELS), value=saved["model"], description="Modelo")
+        n = widgets.IntSlider(min=1, max=eligible, value=saved["n_points"],
+                              continuous_update=False, description="Clases")
+        auto = widgets.Checkbox(value=True, description="Autoajuste")
+        c0 = widgets.FloatText(value=saved["c0"], description="Pepita C0", disabled=True)
+        c = widgets.FloatText(value=saved["c"], description="Parcial C", disabled=True)
+        a = widgets.FloatText(value=saved["a"] or saved["popt"][2], description="a", disabled=True)
+        run = widgets.Button(description="Aplicar modelo", icon="check", button_style="success")
+        image = widgets.Image(format="png", layout=widgets.Layout(width="100%", max_width="900px"))
+        status = widgets.HTML()
+
+        def render():
+            fig, _ = self.plot(distance_unit=distance_unit, value_unit=value_unit)
+            _show_in_widget(fig, image, status, str(self))
+
+        def apply(_):
+            try:
+                if auto.value:
+                    m = self.fit(name.value, n.value, min_pairs=min_pairs)
+                    c0.value, c.value = m["c0"], m["c"]
+                    a.value = m["a"] or m["popt"][2]
+                else:
+                    self.set_model(name.value, c0.value, c.value, a.value, n.value,
+                                   min_pairs=min_pairs)
+                render()
+            except (ValueError, RuntimeError) as error:
+                status.value = f"<pre>{escape(str(error))}</pre>"
+
+        run.on_click(apply)
+
+        def toggle_manual(change):
+            for field in (c0, c, a):
+                field.disabled = change["new"]
+
+        auto.observe(toggle_manual, names="value")
+        render()
+        panel = widgets.VBox([widgets.HBox([name, auto]), n, c0, c, a, run, status, image])
+        display(panel)
+        return panel
+
+
+class LagDistSelector:
+    """Interfaz ligera para recalcular clases sin volver a generar pares."""
+
     def __init__(self, variogram):
         self.Variogram = variogram
-        self.lags = variogram.lags
-        self.lagDist = variogram.lagDist
-        
-##### Gráfico que muestra las distancias de separación para el variograma experimental 
+        self.lagDist = None
+
+    @property
+    def lags(self):
+        return self.Variogram.lags
+
     def lagDistPlot(self, lagDist, distance):
-        lags = self.lags
-        
-        # Selección del intervalo de separación adecuado para los datos
-        bins = np.arange(0.5 * lagDist, lags.max() + 0.5 * lagDist, lagDist)
-        h = bins + 0.5 * lagDist
+        import matplotlib.pyplot as plt
 
-        # Figura
-        fig, ax = plt.subplots(figsize=(15, 4))
+        vag = self.Variogram
+        step = vag._positive(lagDist, "lagDist")
+        cutoff = vag._positive(distance, "distance")
+        used = vag._usable
+        near = vag.lags[used & (vag.lags <= cutoff)]
+        fig, ax = plt.subplots(figsize=(8.8, 2.8))
+        ax.hist(near, bins=120, range=(0, cutoff), color="#0072B2")
+        for k in range(min(50, max(0, int(cutoff / step - 0.5)))):
+            ax.axvline((k + 1.5) * step, color="#B84D12", alpha=.7, lw=.9)
+        ax.set(xlim=(0, cutoff), xlabel="Distancia real entre pares",
+               ylabel="Pares", title=f"Distancias y límites de clase · paso {step:g}")
+        fig.tight_layout()
+        return fig, ax
 
-        # Dispersión de puntos en una recta numérica
-        ax.scatter(lagDist, y=1, c="red", s=120)
-        ax.scatter(x=lags, y=[1]*len(lags), s=40, c="black", alpha=0.8)
-
-        # Intervalos de separación en lineas verticales azules
-        for b in bins:
-            ax.axvline(x=b, lw=0.7)
-
-        # Límites de la figura
-        ax.set_xlim(0, distance)
-
-        # Detalles adicionales
-        ax.set_yticks([])
-        ax.axhline(y=1, lw=0.5)
-
-        # Texto
-        ax.set_title("Intervalos de separación (lag classes)", fontsize=16)
-        ax.set_xlabel("Distancia entre puntos", fontsize=16)
-        ax.annotate(xy=(lagDist, 1), xytext=(lagDist, 1.02), text="$h_{0}$", ha="center",
-                    fontsize=15, arrowprops=dict(arrowstyle="-|>", color="black"))
-        plt.show()
-
-##### Método para desplegar el widget de selección    
     def lagDistWidget(self):
-        title = """# <font size="5">Ajuste de distancia de separación </font>"""
-                
-        # Resumen texto
-        line1 = f"Total de pares: {len(self.lags)}"
-        line2 = f"Distancia mínima: {self.lags.min():.2f}"
-        line3 = f"Distancia máxima: {self.lags.max():.2f}"
-        lines = widgets.VBox([widgets.HTML(line1), widgets.HTML(line2), widgets.HTML(line3)])
-        lines.layout.padding = "10px 0 0 0"
-        
-        # Widget para seleccionar el lagDist
-        lagWidget = widgets.FloatSlider(value=self.Variogram.lagDist, min=self.lags.min(), max=self.lags.max()/2,
-                                        description="lagDist")
-        lagWidget.layout.padding = "30px 0px 0px 0px"
-        
-        # Botón para asignar el lagDist seleccionado
-        button = widgets.Button(description="Asignar lagDist", button_style="", 
-                                icon="save", style={"button_color": "green"})
-        button.layout.padding = "0.5% 5% 5% 5%"
-        button.layout.width = "80%"
+        import ipywidgets as widgets
+        from IPython.display import display
+        from html import escape
 
-        def button_click(b):
-            with output:
-                self.lagDist = lagWidget.value
-                self.Variogram.updateLagDist()
+        v = self.Variogram
+        step = widgets.FloatText(value=v.lagDist, description="Paso")
+        apply_step = widgets.Button(description="Aplicar paso", icon="check", button_style="success")
+        image = widgets.Image(format="png", layout=widgets.Layout(width="100%", max_width="900px"))
+        status = widgets.HTML()
 
-        button.on_click(button_click)
-        
-        # Widget para seleccionar la distancia máxima en la figura
-        distanceWidget = widgets.FloatSlider(value=5*self.Variogram.lagDist, min=2*self.lags.min(), max=self.lags.max()/2,
-                                             description="Distancia")
-        distanceWidget.layout.padding = "30px 0px 0px 0px"
-        
-        # Output de la figura
-        output = widgets.interactive_output(self.lagDistPlot, {"lagDist": lagWidget, "distance": distanceWidget})
-        output.layout.width = "99%"
-        output.layout.padding = "0 0 0 0%"
-        output.clear_output(wait = True)
-        
-        # Caja izquierda
-        leftBox = widgets.VBox([button, lines])
-        leftBox.layout.width = "50%"
-        leftBox.layout.padding = "10px 0 30px 30px"
-        
-        # Caja derecha
-        rightText = widgets.HTML("""<font size="5">Parámetros</font>""")
-        rightText.layout.padding = "0 0 0 20px"
-        rightBox = widgets.VBox([rightText, lagWidget, distanceWidget])
-        rightBox.layout.width = "50%"
-        rightBox.layout.padding = "10px 0 30px 0px"
-        
-        # Caja izquierda y derecha
-        widgetBox = widgets.HBox([leftBox, rightBox])
-        widgetBox.layout.width = "80%"
-        widgetBox.layout.align_items = "center"
-        
-        # Caja principal
-        container = widgets.VBox([output, widgetBox])        
-        container.layout.padding = "0% 0 0% 1.5%"
-        container.layout.width = "900px"
-        container.layout.border = "solid 5px green"
-        
-        # Desplegar los widgets
-        display(Markdown(title), container)    
+        def show():
+            fig, _ = self.lagDistPlot(v.lagDist, min(v.lags.max(), 8 * v.lagDist))
+            _show_in_widget(fig, image, status, str(v))
 
-        
-#########################
-# Variograma experimental
-class Variogram(object):    
-    # Por ahora solo opera con coordenadas en 1D
-    """Variograma experimental para análisis geoestadístico en 1D, admite un mínimo de 10 muestras.
-    
-       Contiene funcionalidades para ajustar los intervalos de separación (lag classes)
-       y el modelo del variograma.
-       Los intervalos de separación son equidistantes.
-       Los modelos pueden ser de tipo lineal, exponencial, esférico o gausiano.
-        
-       Parameters
-       -----------
-       values: ndarray, representa los valores de la variable, siempre tiene la forma (n,)
-               donde n es el número de muestras.
-       coords: ndarray, representa las coordenadas de la variable, dependiendo del número 
-               de dimensiones, puede tener la forma (n,), (n, 2) o (2, n) donde n es el 
-               número de muestras.
-       lag_dist: distancia de separación usada para calcular los puntos del variograma experimental.
-       
-    """
-    
-    def __init__(self, values: np.ndarray, coords: np.ndarray, lagDist=None):
-        
-######### Verifica que los valores de la variable sean de la forma (n,)
-        assert values.ndim == 1, "Los valores de la variable no están en una sola dimensión."
-        self.n = len(values) # Número de muestras
-        assert self.n >= 10, "Cantidad insuficiente de muestras para modelar el variograma experimental."
-        
-######### Verifica que la distancia de separación sea un número
-        if lagDist:
-            assert type(lagDist) in [int, float], "La distancia de separación debe ser un número (int o float)."
-        
-######### Verifica que los valores y las coordenadas contengan el mismo número de muestras
-######### También asigna la dimensión del variograma experimental (1D, 2D, 3D)
-        if coords.ndim == 1:
-            assert len(coords) == self.n, "Los valores y coordenadas de la variable no tienen el mismo número de filas."
-            self.dim = "1D"
-        else:
-            shape = coords.shape
-            assert len(shape) == 2, "Las coordenadas deben tener la forma (n, 2), (2, n), (n, 3) o (3, n) donde n es el número de muestras."
-            argdim, argval = np.argmin(shape), np.argmax(shape)
-            assert len(values) == shape[argval], "Valores y coordenadas de la variable no tienen el mismo número de muestras."
-            self.dim = f"{shape[argdim]}D"
-            
-            # Si tiene la forma (n, 2) o (n, 3), cambiar a (2, n) o (3, n)
-            if argdim == 1:
-                coords = coords.T
-        
-######### Valores y coordenadas de la variable
-        self.values = values
-        self.coords = coords
-        
-######### Otras variables
-        self.var = np.var(values) # Varianza
-        self.model = None         # Modelo     
-        
-######### Procesamiento de variograma 1D
-        if self.dim == "1D":
-            # Procesamiento de distancias y diferencias cuadráticas
-            lags, sqvalues = gam1d(values, coords)
-            array = np.array([lags, sqvalues])
-            sort = array[:, array[0, :].argsort()] # distancias ordenadas de menor a mayor
-            self.lags, self.sqvalues = sort[0], sort[1]
-            
-            # Distancia mínima para establecer lag classes
-            if not lagDist:
-                n_steps = len(lags) // 1000
-                diff = (lags[1:] - lags[:-1]).mean()
-                lagDist = search_clusters(lags, diff, n_steps)
-                self.lagDist = lagDist
-                        
-            # Agrupa las distancias y diferencias cuadráticas en intervalos (bins)
-            bins = np.arange(1.5 * lagDist, lags.max() + 1.5 * lagDist, lagDist)
-            h = bins - 0.5 * lagDist
-            indices = []
-            for b in bins:
-                index = (lags <= b).sum()
-                indices.append(index)
-            split = np.split(np.array([lags, sqvalues]), indices, axis=1)[:-1]
-            self.bins = bins
-            self.h = h
+        def apply(_):
+            try:
+                v.updateLagDist(step.value)
+                show()
+            except ValueError as error:
+                status.value = f"<pre>{escape(str(error))}</pre>"
 
-            # Extrae los valores de gamma y pares para el variograma experimental
-            pairs, gamma = [], []
-            for array in split:
-                if len(array[1, :]) == 0:
-                    continue
-                pairs.append(len(array[1, :]))
-                if len(array[1, :]) == 1:
-                    gamma.append(float(array[1, :]))
-                else:
-                    gamma.append(array[1, :].mean() / 2)
-            self.pairs = np.array(pairs)
-            self.gamma = np.array(gamma)
-            
-            # Selector de distancias
-            self.lagDistSelector = LagDistSelector(self)
-            
-            # Unidades de escala para la semivarianza y la distancia
-            self.var_unit = int(np.floor(np.log10(self.var)))
-            self.dist_unit = int(np.floor(np.log10(self.h.max())))
-            self.var = np.round(self.var, 2 - self.var_unit)
-                
-######### Procesamiento de variograma 2D
-        elif self.dim == "2D":
-            # Procesamiento de distancias y diferencias cuadráticas
-            lags, sqvalues, angles = gam2d(values, coords)
-            array = np.array([lags, sqvalues, angles])
-            sort = array[:, array[0, :].argsort()] # distancias ordenadas de menor a mayor
-            self.lags, self.sqvalues, self.angles = sort[0], sort[1], sort[2]
-        
-######### Procesamiento de variograma 3D
-        elif self.dim == "3D":
-            pass
-
-        
-##### Descripción del objeto creaodo
-    def __str__(self):
-        str1 = f""">>> Variograma experimental {self.dim}
---------------------------------
-Total de muestras (n): {self.n}
-Total de pares (pairs): {len(self.lags)}
-Intervalos (bins): {len(self.bins)}
-Distancia (lagDist): {self.lagDist}
---------------------------------
-"""
-        
-        if self.model != None:
-            model, n_points = self.model["model"], self.model["n_points"]
-            c0, c, a, sill = self.model["c0"], self.model["c"], self.model["a"], self.model["sill"]
-            popt = self.model["popt"]
-            r2, mse = self.model["r2"], self.model["mse"]
-
-            str2 = f""">>> Ajuste de modelo de variograma
---------------------------------
-Modelo (model): {model}
-Pepita o Nugget (C0): {c0}
-Sill parcial (C): {c}
-Sill (C0 + C): {sill}
-Alcance (a): {a}
-Parámetros de función: {popt}
-R2: {r2}   MSE: {mse}"""
-
-            return str1 + str2
-        else:
-            return str1
-        
-        
-##### Método para actualizar la distancia de separación
-    def updateLagDist(self):
-        lagDist = self.lagDistSelector.lagDist
-        lags, sqvalues = self.lags, self.sqvalues
-        
-        # Agrupa las distancias y diferencias cuadráticas en intervalos (bins)
-        bins = np.arange(1.5 * lagDist, lags.max() + 1.5 * lagDist, lagDist)
-        h = bins - 0.5 * lagDist
-        indices = []
-        for b in bins:
-            index = (lags <= b).sum()
-            indices.append(index)
-        split = np.split(np.array([lags, sqvalues]), indices, axis=1)[:-1]
-        self.lagDist = lagDist
-        self.bins = bins
-        self.h = h
-
-        # Extrae los valores de gamma y pares para el variograma experimental
-        pairs, gamma = [], []
-        for array in split:
-            if len(array[1, :]) == 0:
-                continue
-            pairs.append(len(array[1, :]))
-            if len(array[1, :]) == 1:
-                gamma.append(float(array[1, :]))
-            else:
-                gamma.append(array[1, :].mean() / 2)        
-        self.pairs = np.array(pairs)
-        self.gamma = np.array(gamma)
-
-##### Método para mostrar el widget que permite elegir la distancia de separación
-    def selectLagDist(self):
-        self.lagDistSelector.lagDistWidget()
-
-        
-##### Método para ajustar el modelo del variograma experimental        
-    def fitting(self):
-        # Ajuste del variograma
-        h, gamma, var = self.h, self.gamma, self.var
-        hmax = h.max()
-        pairs = self.pairs
-        sigma = 1 / pairs
-        
-        # Generación de datos para el modelamiento
-        table = []
-        fit_functions = [linear, exponential, spherical, gaussian]
-        fit_names = ["linear", "exponential", "spherical", "gaussian"]
-        
-        for func, name in zip(fit_functions, fit_names):
-            for n in range(5, len(gamma)): # Mínimo 5 puntos de ajuste
-                # Modelo
-                p0 = [0, var * (h[n] / hmax), h[n]]
-                popt, pcov = curve_fit(func, h[:n], gamma[:n], sigma=sigma[:n], p0=p0, bounds=(0, np.inf))      
-                # R2 y MSE
-                prediction = func(h[:n], *popt)
-                r2 = r2_score(gamma[:n], prediction)
-                mse = mse_score(gamma[:n], prediction)
-                
-                # Acotación de parámetros
-                c0 = popt[0]
-                if func == linear:
-                    # El sill y el alcance coinciden con distancia máxima de ajuste
-                    c = linear(h[n-1], *popt) - c0
-                    a = h[n-1]
-                    table.append([name, n, c0, c, a, r2, mse, popt])
-                elif func == exponential:
-                    c = popt[1]
-                    a = popt[2] * 3          # Alcance efectivo h = 3 * a
-                    table.append([name, n, c0, c, a, r2, mse, popt])
-                elif func == spherical:
-                    c = popt[1]
-                    a = popt[2]
-                    table.append([name, n, c0, c, a, r2, mse, popt])
-                elif func == gaussian:
-                    c = popt[1]
-                    a = popt[2] * (3 ** 0.5) # Alcance efectivo h = sqrt(3) * a
-                    table.append([name, n, c0, c, a, r2, mse, popt])
-        
-        # DataFrame con los datos de ajuste
-        data = pd.DataFrame(table, columns=["model", "n_points", "c0", "c", "a", "r2", "mse", "popt"])
-        
-        # Redondear los datos de c0, c, a, r2, mse
-        data["c0"] = data["c0"].apply(lambda x: np.round(x, 2 - self.var_unit))
-        data["c"] = data["c"].apply(lambda x: np.round(x, 2 - self.var_unit))
-        data["a"] = data["a"].apply(lambda x: np.round(x, 2 - self.dist_unit))
-        data["r2"] = data["r2"].apply(lambda x: np.round(x, 3))
-        data["mse"] = data["mse"].apply(lambda x: np.round(x, 3 - self.var_unit))
-        data["sill"] = data["c0"] + data["c"]
-        data["sill"] = data["sill"].apply(lambda x: np.round(x, 2 - self.var_unit))
-        
-        # Guardar el dataframe
-        self.data = data                
-        
-        # Selección de valores óptimos de ajuste
-        self.model = data.sort_values(by=["r2", "n_points"], ascending=False).iloc[0, :].copy().to_dict()
-        self.current_model = None
-        
-######### Función que ajusta un modelo específico al variograma experimental
-        default_adjust = [self.model["c0"], self.model["c"], self.model["a"]]
-        def model_fitter(model=self.model["model"], n_points=self.model["n_points"], adjust=default_adjust, auto=True):
-            # Selección del modelo a utilizar en el ajuste del variograma
-            data = self.data
-            mask = (data["model"] == model) & (data["n_points"] == n_points)
-            cols = ["c0", "c", "a", "r2", "mse", "popt", "sill"]
-            c0, c, a, r2, mse, popt, sill = data[mask][cols].copy().values[0]
-            popt = popt.copy()
-            
-            # Selección de modelo
-            if model == "linear":
-                modelfunc = linear
-            elif model == "exponential":
-                modelfunc = exponential
-            elif model == "spherical":
-                modelfunc = spherical
-            elif model == "gaussian":
-                modelfunc = gaussian
-            
-            # Ajuste manual
-            if not auto:
-                popt[0] = adjust[0]
-                popt[1] = adjust[1]
-                if model == "exponential":
-                    popt[2] = adjust[2] / 3
-                elif model == "gaussian":
-                    popt[2] = adjust[2] / (3 ** 0.5)
-                else:
-                    popt[2] = adjust[2]
-                    
-                # c0, c, a
-                c0 = popt[0]
-                if model == "linear":
-                    # El sill y el alcance coinciden con distancia máxima de ajuste
-                    c = linear(h[n-1], *popt) - c0
-                    a = h[n-1]
-                elif model == "exponential":
-                    c = popt[1]
-                    a = popt[2] * 3          # Alcance efectivo h = 3 * a
-                elif model == "spherical":
-                    c = popt[1]
-                    a = popt[2]
-                elif model == "gaussian":
-                    c = popt[1]
-                    a = popt[2] * (3 ** 0.5) # Alcance efectivo h = sqrt(3) * a
-                
-                # r2 y mse
-                prediction = modelfunc(h[:n_points], *popt)
-                r2 = r2_score(gamma[:n_points], prediction)
-                mse = mse_score(gamma[:n_points], prediction)
-            
-            self.current_model = {"model": model, "n_points": n_points,
-                                  "c0": c0, "c": c, "a": a,
-                                  "r2": r2, "mse": mse, 
-                                  "popt": popt, "sill": sill}            
-            
-            # Figura principal
-            fig, ax = plt.subplots(figsize=(10, 5))
-            
-            # Semivariograma experimental
-            ax.scatter(h[:n_points], gamma[:n_points], c="white", s=10, marker="s", edgecolor="blue")
-            
-            # Modelo de semivariograma
-            ax.plot(h[:n_points], modelfunc(h[:n_points], *popt), c="black", lw=1.2)
-            
-            # Etiquetas del eje x e y
-            ax.set_xlabel("Distancia de separación (h)", fontsize=18)
-            ax.set_ylabel("Semivariograma", fontsize=18)
-            
-            ax.axhline(y=var, linewidth=0.8, c="red") # Varianza
-            ax.axvline(x=a, linewidth=0.8, c="red")   # Alcance
-            
-            # Límites del gráfico
-            ax.set_xlim(left=0, right=hmax)
-            ax.set_ylim(bottom=0, top=2*var)
-            
-            ax.grid(lw=0.5) # Grilla
-            
-            plt.show()
-            
-            print(f"Modelo: {model}     Puntos de ajuste: {n_points}")
-            print(f"R2: {r2:.3f}    MSE: {mse:.3f}    Varianza: {var}")
-            
-######### Widget de ajuste del modelo
-        
-        # Escala de semivarianza y distancia
-        step_var = 10 ** (self.var_unit - 2)
-        step_dist = 10 ** (self.dist_unit - 2)
-    
-        # Título del widget
-        title = widgets.HTML(value="<h2>Gamma - Ajuste de Variograma</h2>",
-                             layout=dict(width="80%", margin="0 0 0 10%")
-                             )
-        
-        # Output inicial
-        output = widgets.Output(layout=dict(margin="3% 2% 3% 2%",
-                                            justify_content="center", align_items="center", display="flex"))
-        with output:
-            model_fitter()
-        
-        # Widget de model
-        _model = widgets.Dropdown(value=self.model["model"], options=["linear", "exponential", "spherical", "gaussian"],
-                                  description="Modelo:", 
-                                  layout=dict(width="80%", margin="3% 0 0 10%")
-                                  )
-        
-        # Widget de n_points
-        _n_points = widgets.IntSlider(value=self.model["n_points"], min=5, max=len(gamma)-1, 
-                                      step=1, description="Puntos:",
-                                      layout=dict(width="80%", margin="2% 0 4% 10%")
-                                      )
-        
-        # Widget de autoajuste
-        auto = widgets.Checkbox(value=True, description="Autoajuste", 
-                                layout=dict(width="80%", margin="0 0 0 10%")
-                                )
-        
-        # Widget de c0
-        _nugget = widgets.BoundedFloatText(value=self.model["c0"], min=0.0, max=sys.float_info.max, disabled=True,
-                                           step=step_var, description="Pepita (C0):",
-                                           layout=dict(width="80%", margin="0 0 0 10%")
-                                           )
-        
-        # Widget de c
-        _c = widgets.BoundedFloatText(value=self.model["c"], min=0, max=sys.float_info.max, disabled=True,
-                                      step=step_var, description="Sill Parcial (C):",
-                                      layout=dict(width="80%", margin="0 0 0 10%")
-                                     )
-        
-        # Widget de sill
-        _sill = widgets.BoundedFloatText(value=self.model["sill"], min=0, max=sys.float_info.max, disabled=True,
-                                         step=step_var, description="Sill (C + C0):",
-                                         layout=dict(width="80%", margin="0 0 0 10%")
-                                         )
-        
-        # Widget de alcance
-        _range = widgets.BoundedFloatText(value=self.model["a"], min=self.h[0], max=sys.float_info.max, disabled=True,
-                                          step=step_dist, description="Alcance (a)",
-                                          layout=dict(width="80%", margin="0 0 0 10%")
-                                          )
-        
-        # Interactividad de model y n_points
-        def on_modelpoints_change(change):
-            with output:
-                if auto.value: # Autoajuste activado
-                    model, n_points = _model.value, _n_points.value
-                    data = self.data
-                    mask = (data["model"] == model) & (data["n_points"] == n_points)
-                    cols = ["c0", "c", "sill", "a"]
-                    c0, c, sill, a = data[mask][cols].copy().values[0]
-                    
-                    _nugget.value = c0
-                    _c.value = c
-                    _sill.value = sill
-                    _range.value = a
-                    adjust = [_nugget.value, _c.value, _range.value]
-                else:
-                    adjust = [_nugget.value, _c.value, _range.value]
-                    _sill.value = np.round(np.add(_nugget.value, _c.value), 2 - self.var_unit)
-                    
-                output.clear_output() # Limpiar el gráfico anterior
-                model_fitter(model=_model.value, n_points=_n_points.value, adjust=adjust, auto=auto.value)
-        
-        
-        _model.observe(on_modelpoints_change, names="value")
-        _n_points.observe(on_modelpoints_change, names="value")
-        
-        # Interactividad de c0, c y a
-        def on_value_change(change):
-            if auto.value:
-                pass
-            else:
-                with output:
-                    adjust = [_nugget.value, _c.value, _range.value]
-                    _sill.value = np.round(np.add(_nugget.value, _c.value), 2 - self.var_unit)
-
-                    output.clear_output()  # Limpiar el gráfico anterior
-                    model_fitter(model=_model.value, n_points=_n_points.value, adjust=adjust, auto=auto.value)
-                
-        
-        _nugget.observe(on_value_change, names="value")
-        _c.observe(on_value_change, names="value")
-        _range.observe(on_value_change, names="value")
-        
-        # Interactividad de autoajuste
-        def auto_activation(change):
-            with output:
-                model = _model.value
-                n_points = _n_points.value
-                mask = (data["model"] == model) & (data["n_points"] == n_points)
-                cols = ["c0", "c", "a", "r2", "mse", "popt", "sill"]
-                c0, c, a, r2, rss, popt, sill = data[mask][cols].copy().values[0]
-                popt = popt.copy()
-                
-                if change.new:
-                    _nugget.value, _c.value, _sill.value, _range.value = c0, c, sill, a
-                    output.clear_output()  # Limpiar el gráfico anterior
-                    model_fitter(model=model, n_points=n_points, adjust=[c0, c, a], auto=True)
-                    _nugget.disabled = True
-                    _c.disabled = True
-                    _range.disabled = True
-                    
-                else:
-                    _nugget.value, _c.value, _sill.value, _range.value = c0, c, sill, a
-                    output.clear_output()  # Limpiar el gráfico anterior
-                    model_fitter(model=model, n_points=n_points, adjust=[c0, c, a], auto=False)
-                    _nugget.disabled = False
-                    _c.disabled = False
-                    _range.disabled = False
-        
-        auto.observe(auto_activation, names="value")
-        
-        # Botón para guardar los ajustes
-        save_button = widgets.Button(description="Guardar parámetros", icon="save",
-                                     style=dict(button_color="green", font_weight="bold"),
-                                     layout=dict(width="60%", margin="25px 0 0 20%")
-                                     )
-        
-        # Interactividad de botón de guardar
-        def on_save_click(b):
-            self.model = self.current_model
-        
-        save_button.on_click(on_save_click)
-
-        # Estructura del widget izquierdo
-        left = widgets.VBox([output], layout=dict(width="60%", border="2px solid lightgreen")) 
-        
-        # Estructura del widget derecho
-        right = widgets.VBox([title, _model, _n_points, auto,
-                              _nugget, _c, _sill, _range,
-                              save_button
-                              ],
-                             layout=dict(width="40%", border="2px solid lightgreen")
-                             )
-        
-        # Estructura de la interfaz
-        container = widgets.HBox([left, right], layout=dict(width="90%", height="400px"))
-        
-        # Mostrar el widget
-        display(container)
-        
+        apply_step.on_click(apply)
+        show()
+        panel = widgets.VBox([step, apply_step, status, image])
+        display(panel)
+        return panel
