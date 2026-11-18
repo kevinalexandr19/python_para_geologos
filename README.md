@@ -87,7 +87,7 @@ Es recomendable descargar el contenido del repositorio y usarlo como plantilla p
     - Extreme Gradient Boosting (XGBoost) ✔️
   - PG202 - Aprendizaje no supervisado
     - Análisis de componentes principales (PCA) ✔️
-    - Clustering con K-means ⏳
+    - Clustering con K-means y DBSCAN ✔️
   - PG203 - Deep Learning
     - Fundamentos de Deep Learning ⏳
     - Redes neuronales desde cero ✔️
